@@ -1,15 +1,13 @@
 <cfscript>
 	r = CreateObject("component", "Routing");
 	r.reset();
-	
-	r.addNamed("home", "", $(controller="main", action="index"));
-	
-	r.addNamed("login", "login", $(controller="user", action="login"));
-	r.addNamed("logout", "logout", $(controller="user", action="logout"));
-	
-	r.addNamed("messages", "messages/:page", $(controller="member", action="messages", page="[a-z]+"));
-	
-	r.add("dashboard", $(controller="user", action="dashboard"));
-	
-	$ = function $(){return arguments;}
+	r
+	.add("analytics", {module="analytics", controller="analytics", action="index"})
+	.add("analytics/revoke", {module="analytics", controller="analytics", action="revoke"})
+	.add("analytics/accounts", {module="analytics", controller="analytics", action="accounts"})
+	.add("analytics/properties/:account", {module="analytics", controller="analytics", action="properties", account="[0-9]+"})
+	.add("analytics/account-properties/:account", {module="analytics", controller="analytics", action="set-account", account="[0-9]+"})
+	.add("analytics/account/:account/web-property/:webProperty", {module="analytics", controller="analytics", action="profiles", account="[0-9]+", webProperty="[0-9]+"})
+	.add("analytics/property/:property", {module="analytics", controller="analytics", action="set-property", property="[0-9]+"});
+	r.dump();
 </cfscript>
