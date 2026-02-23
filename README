@@ -1,0 +1,10 @@
+# coldfusion-routes
+
+Simple CFML routing component.
+
+## Tests
+
+A lightweight test script lives at `tests/RoutingTests.cfm`.
+Run it with any CFML engine (for example via CommandBox/Lucee) and verify it prints:
+
+`PASS: Routing tests completed successfully.`
