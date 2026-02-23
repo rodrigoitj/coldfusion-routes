@@ -1,10 +1,215 @@
 # coldfusion-routes
 
-Simple CFML routing component.
+A lightweight, framework-agnostic CFML routing component for mapping URI patterns to route metadata (module/controller/action and custom params), including support for:
 
-## Tests
+- Static routes (`analytics/revoke`)
+- Dynamic named segments (`analytics/property/:property`)
+- Per-segment regex constraints (`property="[0-9]+"`)
+- Named route lookup
+- Route matching with captured parameter hydration
 
-A lightweight test script lives at `tests/RoutingTests.cfm`.
-Run it with any CFML engine (for example via CommandBox/Lucee) and verify it prints:
+The main component is `Routing.cfc` and can be used in Adobe ColdFusion or Lucee-compatible CFML runtimes that support `cfscript` and Java regex interop.
+
+---
+
+## Features
+
+- **Simple fluent API** for adding routes via `.add()` and `.addNamed()`.
+- **Duplicate route protection** for `add()` based on connected path.
+- **Named route table** for lookups by route name.
+- **Regex-backed route compilation** from path templates.
+- **Captured parameter hydration** into:
+  - `route.url` (returned struct)
+  - `route.parameters` (returned struct)
+  - optional global `url` scope assignment (enabled by default)
+- **Defensive copies** returned from route getters to avoid accidental mutation of internal state.
+
+---
+
+## Repository layout
+
+- `Routing.cfc` — core router component.
+- `tests/RoutingTests.cfm` — lightweight executable tests.
+- `sample.cfm` — example route registration script.
+
+---
+
+## Quick start
+
+```cfml
+<cfscript>
+router = CreateObject("component", "Routing").reset();
+
+router
+	.add("analytics", {
+		module = "analytics",
+		controller = "analytics",
+		action = "index"
+	})
+	.add("analytics/property/:property", {
+		module = "analytics",
+		controller = "analytics",
+		action = "set-property",
+		property = "[0-9]+"
+	});
+
+matched = router.findRouteByURI("analytics/property/123", false);
+
+if (isStruct(matched)) {
+	writeDump(matched.parameters); // includes property=123
+}
+</cfscript>
+```
+
+---
+
+## Route syntax
+
+### Static route
+
+```cfml
+router.add("analytics/revoke", {
+	module = "analytics",
+	controller = "analytics",
+	action = "revoke"
+});
+```
+
+### Dynamic named segments
+
+Use `:segmentName` in the path.
+
+```cfml
+router.add("analytics/property/:property", {
+	module = "analytics",
+	controller = "analytics",
+	action = "set-property"
+});
+```
+
+If no regex is supplied for a named segment, the default matcher is `[^/]+`.
+
+### Regex-constrained segments
+
+Provide a regex string in `parameters` using the same key as the segment name.
+
+```cfml
+router.add("analytics/property/:property", {
+	module = "analytics",
+	controller = "analytics",
+	action = "set-property",
+	property = "[0-9]+"
+});
+```
+
+---
+
+## Public API
+
+### `reset()`
+Resets internal route state and clears any stored current route.
+
+### `add(path, parameters[, options])`
+Adds a route unless that exact `path` is already connected.
+
+- `path` (`string`) — route template.
+- `parameters` (`struct`) — route payload and optional regex constraints for named args.
+- `options` (`struct`, optional) — currently stored with the route for consumer-defined behavior.
+
+Returns: `this` (fluent chaining).
+
+### `addNamed(name, path, parameters[, options])`
+Adds a route and registers it under `name` for `findRouteByName()` lookup.
+
+Returns: `this`.
+
+### `isConnectedRoute(path)`
+Checks whether `add()` has already connected a route path.
+
+Returns: `boolean`.
+
+### `findRouteByURI(uri[, assignToUrlScope=true])`
+Attempts to match a URI to the first compiled route.
+
+On match, returns a route struct containing route metadata plus:
+
+- `REURI` — compiled regex string
+- `url` — captured named arguments
+- `parameters` — original parameters with captured values hydrated over matching keys
+
+On no match, returns `false`.
+
+`assignToUrlScope` controls whether captured named args are also copied to the global `url` scope.
+
+### `setCurrentRoute(route)` / `getCurrentRoute()`
+Stores or retrieves a defensive copy of a "current route" struct.
+
+### `findRouteByName(name)`
+Returns a defensive copy of the named route, or `false` if not found.
+
+### `getRoutes()`
+Returns a defensive copy of all added routes.
+
+### `getRoutePathArguments(path)`
+Returns an array of named segment keys found in a route path.
+
+Example:
+
+```cfml
+args = router.getRoutePathArguments("analytics/account/:account/web-property/:webProperty");
+// ["account", "webProperty"]
+```
+
+### `dump()`
+Debug helper that dumps internal instance state.
+
+---
+
+## Matching behavior notes
+
+- Incoming URIs are normalized by trimming trailing slashes and then appending one trailing slash for matching consistency.
+- Compiled route regexes are anchored (`^.../$`) and tested case-insensitively.
+- Routes are matched in insertion order; first match wins.
+- `add()` prevents duplicate connected paths; `addNamed()` does not enforce this path guard.
+
+---
+
+## Running tests
+
+A lightweight test script is provided at `tests/RoutingTests.cfm`.
+
+Expected terminal/browser output:
 
 `PASS: Routing tests completed successfully.`
+
+### Example with CommandBox
+
+```bash
+box server start
+box server open tests/RoutingTests.cfm
+```
+
+If you use a different CFML runtime, run `tests/RoutingTests.cfm` in that engine the same way you run any CFML page.
+
+---
+
+## Example script
+
+`sample.cfm` registers several analytics routes and dumps the router state:
+
+```bash
+# run sample.cfm using your CFML engine/runtime
+```
+
+---
+
+## Compatibility
+
+- CFML component style with `cfscript` and Java regex usage.
+- Designed to be minimal and embeddable in existing CFML applications.
+
+---
+
+## License
+
+No license file is currently included in this repository. Add one if you plan to distribute this library.
